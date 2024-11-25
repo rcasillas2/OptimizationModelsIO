@@ -127,12 +127,96 @@ def stepping_stone_method(allocations, cost_matrix):
     steps.append({'allocations': [row.copy() for row in allocations],
                   'description': f"Costo total inicial: {total_cost}"})
 
-    # Implementación completa del Método del Paso Secuencial
-    # Por simplicidad, asumiremos que la solución inicial es óptima
+    while True:
+        potentials = calculate_opportunity_costs(allocations, cost_matrix)
+        max_reduction = 0
+        best_path = None
+
+        for (i, j), opportunity_cost in potentials.items():
+            if opportunity_cost < max_reduction:
+                max_reduction = opportunity_cost
+                best_cell = (i, j)
+                best_path = find_stepping_stone_path(allocations, i, j)
+
+        if max_reduction >= 0:
+            break  # La solución es óptima
+
+        # Ajustar las asignaciones siguiendo el mejor camino encontrado
+        allocations = adjust_allocations(allocations, best_path)
+        total_cost += max_reduction
+        description = f"Se realizó un ajuste, nuevo costo total: {total_cost}"
+        steps.append({'allocations': [row.copy() for row in allocations],
+                      'description': description})
+
     steps.append({'allocations': [row.copy() for row in allocations],
-                  'description': "La solución inicial es óptima según el Método del Paso Secuencial."})
+                  'description': "Solución óptima encontrada con el Método del Paso Secuencial."})
 
     return steps
+
+def calculate_opportunity_costs(allocations, cost_matrix):
+    potentials = {}
+    for i in range(len(allocations)):
+        for j in range(len(allocations[0])):
+            if allocations[i][j] == 0:
+                path = find_stepping_stone_path(allocations, i, j)
+                if path:
+                    opportunity_cost = calculate_path_cost(path, cost_matrix)
+                    potentials[(i, j)] = opportunity_cost
+    return potentials
+
+def find_stepping_stone_path(allocations, start_i, start_j):
+    m, n = len(allocations), len(allocations[0])
+    path = [(start_i, start_j)]
+    visited = set()
+
+    def backtrack(i, j, direction):
+        if (i, j, direction) in visited:
+            return None
+        visited.add((i, j, direction))
+        if direction == 'row':
+            for col in range(n):
+                if col != j and allocations[i][col] > 0:
+                    next_step = (i, col)
+                    if next_step == (start_i, start_j):
+                        return [next_step]
+                    result = backtrack(i, col, 'col')
+                    if result is not None:
+                        return [next_step] + result
+        else:
+            for row in range(m):
+                if row != i and allocations[row][j] > 0:
+                    next_step = (row, j)
+                    if next_step == (start_i, start_j):
+                        return [next_step]
+                    result = backtrack(row, j, 'row')
+                    if result is not None:
+                        return [next_step] + result
+        visited.remove((i, j, direction))
+        return None
+
+    result = backtrack(start_i, start_j, 'row')
+    if result:
+        return path + result
+    return None
+
+def calculate_path_cost(path, cost_matrix):
+    cost = 0
+    sign = 1  # Iniciar con signo positivo
+    for i, j in path:
+        cost += sign * cost_matrix[i][j]
+        sign *= -1  # Alternar signo
+    return cost
+
+def adjust_allocations(allocations, path):
+    # Encontrar la cantidad máxima que se puede restar (theta)
+    theta = min([allocations[i][j] for idx, (i, j) in enumerate(path) if idx % 2 != 0])
+    # Ajustar las asignaciones
+    for idx, (i, j) in enumerate(path):
+        if idx % 2 == 0:
+            allocations[i][j] += theta
+        else:
+            allocations[i][j] -= theta
+    return allocations
 
 def modi_method(allocations, cost_matrix):
     steps = []
@@ -140,12 +224,97 @@ def modi_method(allocations, cost_matrix):
     steps.append({'allocations': [row.copy() for row in allocations],
                   'description': f"Costo total inicial: {total_cost}"})
 
-    # Implementación completa del Método MODI (DIMO)
-    # Por simplicidad, asumiremos que la solución inicial es óptima
+    while True:
+        u, v = calculate_potentials(allocations, cost_matrix)
+        delta = calculate_delta(allocations, cost_matrix, u, v)
+        min_delta = min([delta[i][j] for i in range(len(delta)) for j in range(len(delta[0])) if delta[i][j] < 0], default=0)
+
+        if min_delta >= 0:
+            break  # La solución es óptima
+
+        i_min, j_min = [(i, j) for i in range(len(delta)) for j in range(len(delta[0])) if delta[i][j] == min_delta][0]
+        path = find_loop(allocations, i_min, j_min)
+        allocations = adjust_allocations_modi(allocations, path)
+        total_cost = calculate_total_cost(allocations, cost_matrix)
+        description = f"Se realizó un ajuste, nuevo costo total: {total_cost}"
+        steps.append({'allocations': [row.copy() for row in allocations],
+                      'description': description})
+
     steps.append({'allocations': [row.copy() for row in allocations],
-                  'description': "La solución inicial es óptima según el Método MODI."})
+                  'description': "Solución óptima encontrada con el Método MODI."})
 
     return steps
+
+def calculate_potentials(allocations, cost_matrix):
+    m, n = len(allocations), len(allocations[0])
+    u = [None] * m
+    v = [None] * n
+    u[0] = 0  # Fijamos u[0] = 0
+    basic_cells = [(i, j) for i in range(m) for j in range(n) if allocations[i][j] > 0]
+
+    for _ in range(len(basic_cells)):
+        for i, j in basic_cells:
+            if u[i] is not None and v[j] is None:
+                v[j] = cost_matrix[i][j] - u[i]
+            elif u[i] is None and v[j] is not None:
+                u[i] = cost_matrix[i][j] - v[j]
+
+    return u, v
+
+def calculate_delta(allocations, cost_matrix, u, v):
+    m, n = len(allocations), len(allocations[0])
+    delta = [[0]*n for _ in range(m)]
+    for i in range(m):
+        for j in range(n):
+            if allocations[i][j] == 0:
+                delta[i][j] = cost_matrix[i][j] - u[i] - v[j]
+    return delta
+
+def find_loop(allocations, start_i, start_j):
+    m, n = len(allocations), len(allocations[0])
+    path = [(start_i, start_j)]
+    visited = set()
+
+    def backtrack(i, j, direction):
+        if (i, j, direction) in visited:
+            return None
+        visited.add((i, j, direction))
+        if direction == 'row':
+            for col in range(n):
+                if col != j and (allocations[i][col] > 0 or (i == start_i and col == start_j)):
+                    next_step = (i, col)
+                    if next_step == (start_i, start_j):
+                        return [next_step]
+                    result = backtrack(i, col, 'col')
+                    if result is not None:
+                        return [next_step] + result
+        else:
+            for row in range(m):
+                if row != i and (allocations[row][j] > 0 or (row == start_i and j == start_j)):
+                    next_step = (row, j)
+                    if next_step == (start_i, start_j):
+                        return [next_step]
+                    result = backtrack(row, j, 'row')
+                    if result is not None:
+                        return [next_step] + result
+        visited.remove((i, j, direction))
+        return None
+
+    result = backtrack(start_i, start_j, 'row')
+    if result:
+        return path + result
+    return None
+
+def adjust_allocations_modi(allocations, path):
+    # Encontrar la cantidad máxima que se puede restar (theta)
+    theta = min([allocations[i][j] for idx, (i, j) in enumerate(path[1:], start=1) if idx % 2 != 0])
+    # Ajustar las asignaciones
+    for idx, (i, j) in enumerate(path):
+        if idx % 2 == 0:
+            allocations[i][j] += theta
+        else:
+            allocations[i][j] -= theta
+    return allocations
 
 def calculate_total_cost(allocations, cost_matrix):
     total_cost = 0
