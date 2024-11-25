@@ -37,6 +37,9 @@ def vogel_approximation_method(cost_matrix, supply, demand):
     while sum(supply_copy) > 0 and sum(demand_copy) > 0:
         row_penalties = []
         for i in range(len(supply)):
+            if supply_copy[i] == 0:
+                row_penalties.append(None)
+                continue
             costs = [cost_matrix[i][j] for j in range(len(demand)) if demand_copy[j] > 0]
             if len(costs) >= 2:
                 sorted_costs = sorted(costs)
@@ -49,6 +52,9 @@ def vogel_approximation_method(cost_matrix, supply, demand):
 
         col_penalties = []
         for j in range(len(demand)):
+            if demand_copy[j] == 0:
+                col_penalties.append(None)
+                continue
             costs = [cost_matrix[i][j] for i in range(len(supply)) if supply_copy[i] > 0]
             if len(costs) >= 2:
                 sorted_costs = sorted(costs)
@@ -59,15 +65,32 @@ def vogel_approximation_method(cost_matrix, supply, demand):
                 penalty = None
             col_penalties.append(penalty)
 
-        max_row_penalty = max([p for p in row_penalties if p is not None], default=None)
-        max_col_penalty = max([p for p in col_penalties if p is not None], default=None)
+        valid_row_penalties = [p for p in row_penalties if p is not None]
+        valid_col_penalties = [p for p in col_penalties if p is not None]
+
+        if not valid_row_penalties and not valid_col_penalties:
+            break  # No se pueden hacer más asignaciones
+
+        if valid_row_penalties:
+            max_row_penalty = max(valid_row_penalties)
+        else:
+            max_row_penalty = None
+
+        if valid_col_penalties:
+            max_col_penalty = max(valid_col_penalties)
+        else:
+            max_col_penalty = None
 
         if max_row_penalty is None and max_col_penalty is None:
             break  # No se pueden hacer más asignaciones
 
         if (max_row_penalty or 0) >= (max_col_penalty or 0):
-            i = row_penalties.index(max_row_penalty)
+            i_candidates = [idx for idx, p in enumerate(row_penalties) if p == max_row_penalty]
+            i = i_candidates[0]
             costs = [(cost_matrix[i][j], j) for j in range(len(demand)) if demand_copy[j] > 0]
+            if not costs:
+                row_penalties[i] = None
+                continue
             min_cost, min_j = min(costs)
             allocation = min(supply_copy[i], demand_copy[min_j])
             allocations[i][min_j] = allocation
@@ -77,8 +100,12 @@ def vogel_approximation_method(cost_matrix, supply, demand):
             steps.append({'allocations': [row.copy() for row in allocations],
                           'description': description})
         else:
-            j = col_penalties.index(max_col_penalty)
+            j_candidates = [idx for idx, p in enumerate(col_penalties) if p == max_col_penalty]
+            j = j_candidates[0]
             costs = [(cost_matrix[i][j], i) for i in range(len(supply)) if supply_copy[i] > 0]
+            if not costs:
+                col_penalties[j] = None
+                continue
             min_cost, min_i = min(costs)
             allocation = min(supply_copy[min_i], demand_copy[j])
             allocations[min_i][j] = allocation
@@ -141,7 +168,6 @@ def stepping_stone_method(allocations, cost_matrix):
         if max_reduction >= 0:
             break  # La solución es óptima
 
-        # Ajustar las asignaciones siguiendo el mejor camino encontrado
         allocations = adjust_allocations(allocations, best_path)
         total_cost += max_reduction
         description = f"Se realizó un ajuste, nuevo costo total: {total_cost}"
@@ -208,9 +234,7 @@ def calculate_path_cost(path, cost_matrix):
     return cost
 
 def adjust_allocations(allocations, path):
-    # Encontrar la cantidad máxima que se puede restar (theta)
     theta = min([allocations[i][j] for idx, (i, j) in enumerate(path) if idx % 2 != 0])
-    # Ajustar las asignaciones
     for idx, (i, j) in enumerate(path):
         if idx % 2 == 0:
             allocations[i][j] += theta
@@ -306,9 +330,7 @@ def find_loop(allocations, start_i, start_j):
     return None
 
 def adjust_allocations_modi(allocations, path):
-    # Encontrar la cantidad máxima que se puede restar (theta)
     theta = min([allocations[i][j] for idx, (i, j) in enumerate(path[1:], start=1) if idx % 2 != 0])
-    # Ajustar las asignaciones
     for idx, (i, j) in enumerate(path):
         if idx % 2 == 0:
             allocations[i][j] += theta
