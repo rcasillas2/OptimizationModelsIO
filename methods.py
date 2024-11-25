@@ -225,3 +225,4 @@ def modi_method(allocations, cost_matrix):
                      min_cell[0]+1},{min_cell[1]+1}) con costo marginal {min_delta}"})
 
     return steps
+

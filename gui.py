@@ -190,3 +190,4 @@ class MainApplication(tk.Tk):
         if self.current_step > 0:
             self.current_step -= 1
             self.display_step()
+
