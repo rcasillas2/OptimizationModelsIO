@@ -18,7 +18,15 @@ class MainApplication(tk.Tk):
         self.method_var = tk.StringVar()
         self.num_supply_var = tk.IntVar(value=3)
         self.num_demand_var = tk.IntVar(value=3)
+        self.configure_gui()
         self.create_widgets()
+
+    def configure_gui(self):
+        self.style = ttk.Style()
+        self.style.configure('TButton', font=('Arial', 12), background='#AED6F1')
+        self.style.configure('TLabel', font=('Arial', 12))
+        self.style.configure('TEntry', font=('Arial', 12))
+        self.configure(bg='#F0F8FF')
 
     def create_widgets(self):
         methods = [
@@ -29,18 +37,21 @@ class MainApplication(tk.Tk):
             "1.5 DIMO (método de distribución modificada)",
         ]
 
-        ttk.Label(self, text="Seleccione el método:").grid(row=0, column=0, sticky="w")
-        self.method_combo = ttk.Combobox(self, values=methods, textvariable=self.method_var, state="readonly")
+        ttk.Label(self, text="Seleccione el método:", background='#F0F8FF').grid(row=0, column=0, sticky="w")
+        self.method_combo = ttk.Combobox(self, values=methods, textvariable=self.method_var, state="readonly", font=('Arial', 12))
         self.method_combo.grid(row=0, column=1)
         self.method_combo.current(0)
 
-        ttk.Label(self, text="Número de proveedores:").grid(row=1, column=0, sticky="w")
+        ttk.Label(self, text="Número de proveedores:", background='#F0F8FF').grid(row=1, column=0, sticky="w")
         ttk.Entry(self, textvariable=self.num_supply_var).grid(row=1, column=1)
 
-        ttk.Label(self, text="Número de consumidores:").grid(row=2, column=0, sticky="w")
+        ttk.Label(self, text="Número de consumidores:", background='#F0F8FF').grid(row=2, column=0, sticky="w")
         ttk.Entry(self, textvariable=self.num_demand_var).grid(row=2, column=1)
 
-        ttk.Button(self, text="Ingresar datos", command=self.input_data).grid(row=3, column=0, columnspan=2, pady=5)
+        pastel_button_style = ttk.Style()
+        pastel_button_style.configure('Pastel.TButton', font=('Arial', 12), background='#A9DFBF', foreground='black')
+
+        ttk.Button(self, text="Ingresar datos", command=self.input_data, style='Pastel.TButton').grid(row=3, column=0, columnspan=2, pady=5)
 
     def input_data(self):
         num_supply = self.num_supply_var.get()
@@ -52,36 +63,40 @@ class MainApplication(tk.Tk):
 
         self.data_window = tk.Toplevel(self)
         self.data_window.title("Ingresar datos")
+        self.data_window.configure(bg='#F0F8FF')
 
         self.cost_entries = []
         for i in range(num_supply):
             row_entries = []
             for j in range(num_demand):
-                e = ttk.Entry(self.data_window, width=5)
+                e = ttk.Entry(self.data_window, width=5, font=('Arial', 12))
                 e.grid(row=i + 1, column=j + 1, padx=2, pady=2)
                 row_entries.append(e)
             self.cost_entries.append(row_entries)
 
         for j in range(num_demand):
-            ttk.Label(self.data_window, text=f"D{j+1}").grid(row=0, column=j + 1)
+            ttk.Label(self.data_window, text=f"D{j+1}", background='#F0F8FF', font=('Arial', 12)).grid(row=0, column=j + 1)
         for i in range(num_supply):
-            ttk.Label(self.data_window, text=f"S{i+1}").grid(row=i + 1, column=0)
+            ttk.Label(self.data_window, text=f"S{i+1}", background='#F0F8FF', font=('Arial', 12)).grid(row=i + 1, column=0)
 
-        ttk.Label(self.data_window, text="Oferta").grid(row=0, column=num_demand + 1)
+        ttk.Label(self.data_window, text="Oferta", background='#F0F8FF', font=('Arial', 12)).grid(row=0, column=num_demand + 1)
         self.supply_entries = []
         for i in range(num_supply):
-            e = ttk.Entry(self.data_window, width=5)
+            e = ttk.Entry(self.data_window, width=5, font=('Arial', 12))
             e.grid(row=i + 1, column=num_demand + 1, padx=2, pady=2)
             self.supply_entries.append(e)
 
-        ttk.Label(self.data_window, text="Demanda").grid(row=num_supply + 1, column=0)
+        ttk.Label(self.data_window, text="Demanda", background='#F0F8FF', font=('Arial', 12)).grid(row=num_supply + 1, column=0)
         self.demand_entries = []
         for j in range(num_demand):
-            e = ttk.Entry(self.data_window, width=5)
+            e = ttk.Entry(self.data_window, width=5, font=('Arial', 12))
             e.grid(row=num_supply + 1, column=j + 1, padx=2, pady=2)
             self.demand_entries.append(e)
 
-        ttk.Button(self.data_window, text="Resolver", command=self.solve_problem).grid(
+        pastel_button_style = ttk.Style()
+        pastel_button_style.configure('Pastel.TButton', font=('Arial', 12), background='#A9DFBF', foreground='black')
+
+        ttk.Button(self.data_window, text="Resolver", command=self.solve_problem, style='Pastel.TButton').grid(
             row=num_supply + 2, column=0, columnspan=num_demand + 2, pady=5
         )
 
@@ -101,18 +116,8 @@ class MainApplication(tk.Tk):
         total_supply = sum(supply)
         total_demand = sum(demand)
         if total_supply != total_demand:
-            # Balancear el problema agregando oferta o demanda ficticia
-            if total_supply < total_demand:
-                # Agregar una oferta ficticia
-                cost_matrix.append([0]*len(demand))
-                supply.append(total_demand - total_supply)
-                messagebox.showinfo("Información", "Se agregó una oferta ficticia para balancear el problema.")
-            elif total_demand < total_supply:
-                # Agregar una demanda ficticia
-                for row in cost_matrix:
-                    row.append(0)
-                demand.append(total_supply - total_demand)
-                messagebox.showinfo("Información", "Se agregó una demanda ficticia para balancear el problema.")
+            messagebox.showerror("Error", "El problema no está balanceado. La oferta total y la demanda total deben ser iguales.")
+            return
 
         method = self.method_var.get()
         if method.startswith("1.1"):
@@ -137,23 +142,29 @@ class MainApplication(tk.Tk):
 
         self.steps = steps
         self.current_step = 0
+        self.cost_matrix = cost_matrix
         self.display_solution()
 
     def display_solution(self):
         self.solution_window = tk.Toplevel(self)
         self.solution_window.title("Solución")
-        self.step_label = tk.Label(self.solution_window)
+        self.solution_window.configure(bg='#F0F8FF')
+
+        self.step_label = tk.Label(self.solution_window, font=('Arial', 12), bg='#F0F8FF')
         self.step_label.pack()
-        self.table_frame = tk.Frame(self.solution_window)
+        self.table_frame = tk.Frame(self.solution_window, bg='#F0F8FF')
         self.table_frame.pack()
-        self.description_label = tk.Label(self.solution_window)
+        self.description_label = tk.Label(self.solution_window, font=('Arial', 12), bg='#F0F8FF')
         self.description_label.pack()
-        navigation_frame = tk.Frame(self.solution_window)
+        navigation_frame = tk.Frame(self.solution_window, bg='#F0F8FF')
         navigation_frame.pack()
 
-        prev_button = ttk.Button(navigation_frame, text="Anterior", command=self.previous_step)
+        pastel_button_style = ttk.Style()
+        pastel_button_style.configure('Pastel.TButton', font=('Arial', 12), background='#AED6F1', foreground='black')
+
+        prev_button = ttk.Button(navigation_frame, text="Anterior", command=self.previous_step, style='Pastel.TButton')
         prev_button.grid(row=0, column=0, padx=5, pady=5)
-        next_button = ttk.Button(navigation_frame, text="Siguiente", command=self.next_step)
+        next_button = ttk.Button(navigation_frame, text="Siguiente", command=self.next_step, style='Pastel.TButton')
         next_button.grid(row=0, column=1, padx=5, pady=5)
 
         self.update_solution_display()
@@ -171,15 +182,15 @@ class MainApplication(tk.Tk):
         for i in range(m):
             for j in range(n):
                 value = allocations[i][j]
-                text = str(value) if value != 0 else ""
-                label = tk.Label(self.table_frame, text=text, width=5, borderwidth=1, relief="solid")
+                text = f"{value}\n({self.cost_matrix[i][j]})" if value != 0 else f"({self.cost_matrix[i][j]})"
+                label = tk.Label(self.table_frame, text=text, width=8, height=4, borderwidth=1, relief="solid", font=('Arial', 12))
                 label.grid(row=i+1, column=j+1)
 
         for j in range(n):
-            header = tk.Label(self.table_frame, text=f"D{j+1}", width=5, borderwidth=1, relief="solid", bg="lightgray")
+            header = tk.Label(self.table_frame, text=f"D{j+1}", width=8, borderwidth=1, relief="solid", bg="#D6EAF8", font=('Arial', 12))
             header.grid(row=0, column=j+1)
         for i in range(m):
-            header = tk.Label(self.table_frame, text=f"S{i+1}", width=5, borderwidth=1, relief="solid", bg="lightgray")
+            header = tk.Label(self.table_frame, text=f"S{i+1}", width=8, borderwidth=1, relief="solid", bg="#D6EAF8", font=('Arial', 12))
             header.grid(row=i+1, column=0)
 
         self.step_label.config(text=f"Paso {self.current_step + 1} de {len(self.steps)}")
@@ -189,6 +200,9 @@ class MainApplication(tk.Tk):
         if self.current_step < len(self.steps) - 1:
             self.current_step += 1
             self.update_solution_display()
+        else:
+            total_cost = calculate_total_cost(self.steps[-1]['allocations'], self.cost_matrix)
+            messagebox.showinfo("Costo Total", f"El costo total (Z) es: {total_cost}")
 
     def previous_step(self):
         if self.current_step > 0:
