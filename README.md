@@ -1,6 +1,6 @@
 # 🚚 Transportation Problem Solver
 
-Welcome to the **Transportation Problem Solver**! This application allows you to solve transportation problems using various methods from Operations Research. It provides a graphical user interface (GUI) to input your data and see step-by-step solutions for better understanding.
+This application allows you to solve transportation problems using various methods from Operations Research. It provides a graphical user interface (GUI) to input your data and see step-by-step solutions for better understanding.
 
 ## 📖 Overview
 
